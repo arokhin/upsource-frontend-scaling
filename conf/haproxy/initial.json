@@ -1,0 +1,5 @@
+{
+  "frontends": [
+    {"name":"frontend", "address":"frontend:10070", "load":0}
+  ]
+}
