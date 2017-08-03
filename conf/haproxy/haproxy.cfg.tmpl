@@ -1,0 +1,92 @@
+global
+    log         127.0.0.1 local2
+
+    chroot      /var/lib/haproxy
+    pidfile     /var/run/haproxy.pid
+    maxconn     4000
+    user        haproxy
+    group       haproxy
+    daemon
+    nbproc      1
+    stats socket 0.0.0.0:5556 level admin
+    spread-checks 3
+
+defaults
+    log                     global
+    option                  log-health-checks
+    option                  abortonclose
+    option                  redispatch    #actually useless because we don't stick users to servers using cookies
+    retries                 3
+    #option splice-auto      #HAProxy should be compiled with splice support to use this option
+    timeout http-request    100s
+    timeout queue           1m
+    timeout connect         100s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 100s
+    timeout check           100s
+    maxconn                 3000
+    cookie UpsourceServer insert maxidle 5m maxlife 5m
+    errorfile 503 /conf/haproxy/haproxy_503.http.tmpl
+    errorfile 504 /conf/haproxy/haproxy_504.http.tmpl
+
+frontend http
+    bind 0.0.0.0:{{env['UPSOURCE_EXPOSED_PROXY_PORT'] or "8080"}}
+    mode http
+
+    option forwardfor except 127.0.0.0/8
+
+    option                  httplog
+
+    no option httpclose
+    no option forceclose
+    option http-server-close          ### this is a key option for sticky sessions
+    no option http-pretend-keepalive
+
+    capture request header X-Forwarded-For len 50
+
+    acl is_opscenter_main_page path /monitoring
+    acl is_opscenter path_beg /monitoring/
+    use_backend opscenter if is_opscenter_main_page or is_opscenter
+
+    acl is_socket_url path_beg /~socket.io/
+    use_backend http_websocket if is_socket_url
+
+    stats enable
+    stats hide-version
+    stats refresh 30s
+    stats show-node
+    stats auth upsource:upsource
+    stats uri  /haproxy?stats
+
+    default_backend http_static_backend
+
+backend opscenter
+    mode http
+    option httplog
+    server monitoring {{env['MONITORING_HOST']}}:{{env['MONITORING_PORT']}}
+
+backend http_websocket
+    mode http
+    balance leastconn
+    option httplog
+    timeout queue 10s
+
+    option httpchk GET /~check-alive
+
+{% for item in data["frontends"] %}
+{% set weight = 256 - 2.56 * item["load"] %}
+    server {{ item["name"] }} {{ item["address"] }} weight {{ weight|round|int }} maxconn 1024 check inter 5s cookie {{ item["name"] }}
+{% endfor %}
+
+backend http_static_backend
+    mode http
+    balance leastconn
+    option httplog
+
+    option httpchk GET /~check-alive
+
+{% for item in data["frontends"] %}
+{% set weight = 256 - 2.56 * item["load"] %}
+    server {{ item["name"] }} {{ item["address"] }} weight {{ weight|round|int }} maxconn 1024 check inter 5s cookie {{ item["name"] }}
+{% endfor %}
