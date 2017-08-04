@@ -3,7 +3,7 @@
 set -e
 
 MONITORING_HOST=${MONITORING_HOST:-"monitoring"}
-MONITORING_PORT=${MONITORING_PORT:-"10080"}
+MONITORING_PORT=${UPSOURCE_MONITORING_LISTEN_PORT:-"10080"}
 
 # Init haproxy config
 python -c 'import loadbalancer; loadbalancer.init_config()' http://${MONITORING_HOST}:${MONITORING_PORT}/monitoring/frontends /conf/haproxy/haproxy.cfg.tmpl /usr/local/etc/haproxy/haproxy.cfg
