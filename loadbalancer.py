@@ -16,11 +16,11 @@ url = sys.argv[1]
 template_path, template_name = os.path.split(sys.argv[2])
 output_file = sys.argv[3]
 is_debug = os.getenv('UPSOURCE_PROXY_DEBUG') == "true"
-
+script_path = os.getenv('HAPROXY_SCRIPTS_LOCATION')
 
 
 def init_config():
-    f = open('/conf/haproxy/initial.json', 'r')
+    f = open(script_path + '/conf/haproxy/initial.json', 'r')
     data = f.read()
     f.close()
     fill_template(data, output_file)
