@@ -27,8 +27,8 @@ defaults
     timeout check           100s
     maxconn                 3000
     cookie UpsourceServer insert maxidle 5m maxlife 5m
-    errorfile 503 /conf/haproxy/haproxy_503.http.tmpl
-    errorfile 504 /conf/haproxy/haproxy_504.http.tmpl
+    errorfile 503 {{env['HAPROXY_SCRIPTS_LOCATION']}}/conf/haproxy/haproxy_503.http.tmpl
+    errorfile 504 {{env['HAPROXY_SCRIPTS_LOCATION']}}/conf/haproxy/haproxy_504.http.tmpl
 
 frontend http
     bind 0.0.0.0:{{env['UPSOURCE_EXPOSED_PROXY_PORT'] or "8080"}}
